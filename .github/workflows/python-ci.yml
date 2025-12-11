@@ -20,12 +20,20 @@ jobs:
         python-version: "3.x"
         
     - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Start gunicorn in background
       run: |
-        pip install -r requirements.txt
-        
-    - name: Run Python script
-      run: |
-        python app.py
-        echo "✅ Bhau is now learning real DevOps!"
+        nohup gunicorn -w 2 -b 127.0.0.1:8000 app:app > server.log 2>&1 &
+        echo $! > server.pid
+        sleep 2
+    
+    - name: Run smoke tests
+      run: curl http://127.0.0.1:8000/ || (tail -n 200 server.log && exit 1)
+    
+    - name: Stop gunicorn
+      if: always()
+      run: kill $(cat server.pid) || true
+
 
 
